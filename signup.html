@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="firebase-config.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <p id="message" class="message hidden"></p>
+        <h2>Sign Up</h2>
+        <form id="signup-form">
+            <div class="input-group">
+                <input type="text" id="fullname" required>
+                <label for="fullname">Full Name</label>
+            </div>
+            <div class="input-group">
+                <input type="email" id="email" required>
+                <label for="email">Email</label>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" required>
+                <label for="password">Password</label>
+            </div>
+            <button class="btn">Sign Up</button>
+        </form>
+        <p class="info">Have an account? <a href="login.html" class="link">Log in</a></p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-app.js'
+        // Add Firebase products that you want to use
+        import * as firebaseAuth from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-auth.js'
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-database.js'
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+        // Initialize Firebase services using the 'app' instance
+        const auth = firebaseAuth.getAuth(app);
+        const db = getDatabase(app);
+
+        // Input validation
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const messageElement = document.getElementById('message');
+
+        const validateInput = (inputElement) => {
+            if (!inputElement.checkValidity()) {
+                inputElement.parentElement.classList.add('invalid');
+            } else {
+                inputElement.parentElement.classList.remove('invalid');
+            }
+        };
+
+        const showMessage = (message, isSuccess) => {
+            messageElement.textContent = message;
+            messageElement.classList.remove('hidden');
+            messageElement.classList.add(isSuccess ? 'success' : 'error');
+
+            // Automatically hide the message after 5 seconds (5000 milliseconds)
+            setTimeout(() => {
+                messageElement.classList.add('hidden');
+            }, 5000);
+        };
+
+        emailInput.addEventListener('input', () => {
+            validateInput(emailInput);
+        });
+
+        passwordInput.addEventListener('input', () => {
+            validateInput(passwordInput);
+        });
+
+        const signupForm = document.getElementById('signup-form');
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const email = signupForm.email.value;
+            const password = signupForm.password.value;
+            const displayName = signupForm.fullname.value; // Get the display name
+
+            // Use Firebase auth object for email/password signup
+            firebaseAuth.createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    // Successful signup
+                    const user = userCredential.user;
+                    console.log('Signed up:', user);
+                    showMessage("Signup successfully!", true);
+
+                    // Set the user's display name
+                    firebaseAuth.updateProfile(user, { displayName: displayName })
+                        .then(() => {
+                            console.log('User display name updated:', user.displayName);
+
+                            // Redirect to dashboard after successful signup
+                            window.location.href = 'dashboard.html';
+                        })
+                        .catch((error) => {
+                            console.error('Error updating user display name:', error);
+                        });
+                })
+                .catch((error) => {
+                    // Handle signup error
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+
+                    if (errorCode === 'auth/email-already-in-use') {
+                        showMessage('Email address is already exist.', false);
+                    } else {
+                        console.error('Signup error:', errorCode, errorMessage);
+                    }
+                });
+        })
+    </script>
+</body>
+
+</html>
