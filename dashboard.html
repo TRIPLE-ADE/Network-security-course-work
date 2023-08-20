@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #333;
+            color: #fff;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: -250px;
+            transition: left 0.3s ease;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .sidebar.active {
+            left: 0;
+        }
+
+        .content {
+            margin-left: 0;
+            padding: 20px;
+            background-color: #fff;
+            transition: margin-left 0.3s ease; 
+        }
+
+        /* .content.active {
+            margin-left: 250px;
+        } */
+
+        h1 {
+            color: #333;
+        }
+
+        #user-info {
+            margin-top: 20px;
+        }
+
+        #user-name {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        a {
+            text-decoration: none;
+            color: #fff;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: #007bff;
+        }
+
+        /* .logout-button:hover {
+            color: #dc3545;
+        } */
+
+        .toggle-button {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+    </style>
+    <script src="firebase-config.js"></script>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <h3>Navigation</h3>
+        <ul>
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Profile</a></li>
+            <li><a href="#">Settings</a></li>
+            <li><a href="#" id="logout-button" class="logout-button">Logout</a></li>
+        </ul>
+    </div>
+    <div class="content" id="content">
+        <span class="toggle-button" id="toggle-button">&#9776;</span>
+        <h1>Welcome to Your Dashboard</h1>
+        <div id="user-info">
+            <h2>Hello, <span id="user-name"></span>!</h2>
+        </div>
+    </div>
+
+        
+    <script type="module">
+
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-app.js';
+        import * as firebaseAuth from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-auth.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-database.js'
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+        // Initialize Firebase services using the 'app' instance
+        const auth = firebaseAuth.getAuth(app);
+        const db = getDatabase(app);
+
+        // Store the timeout ID
+        let logoutTimer;
+
+        // Function to start the session timeout timer
+        function startSessionTimeout() {
+            logoutTimer = setTimeout(() => {
+                // Perform sign out when the timer expires
+                firebaseAuth.signOut(auth)
+                    .then(() => {
+                        console.log('User has been logged out due to inactivity.');
+                        // Redirect to login page or display a message
+                        window.location.href = 'login.html';
+                    })
+                    .catch(error => {
+                        console.error('Error signing out:', error);
+                    });
+            }, 600000); // 10 minutes in milliseconds
+        }
+
+        // Get the logout button element
+        const logoutButton = document.getElementById('logout-button');
+        const sidebar = document.getElementById('sidebar');
+        const content = document.getElementById('content');
+        const toggleButton = document.getElementById('toggle-button');
+
+        // Toggle the active class on sidebar and content
+        toggleButton.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            content.classList.toggle('active');
+        });
+
+        // Add click event listener to logout button
+        logoutButton.addEventListener('click', () => {
+            // Perform sign out when the button is clicked
+            firebaseAuth.signOut(auth)
+                .then(() => {
+                    console.log('User has been logged out.');
+                    // Redirect to login page or display a message
+                    window.location.href = 'login.html';
+                })
+                .catch(error => {
+                    console.error('Error signing out:', error);
+                });
+        });
+
+        // Event listeners to detect user activity and reset the timer
+        document.addEventListener('mousemove', () => {
+            clearTimeout(logoutTimer);
+            startSessionTimeout();
+        });
+
+        document.addEventListener('keydown', () => {
+            clearTimeout(logoutTimer);
+            startSessionTimeout();
+        });
+
+        // Check if a user is currently authenticated
+        const userDisplayName = document.getElementById('user-name');
+        firebaseAuth.onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                // User is not logged in, redirect to login page
+                window.location.href = 'login.html';
+            } else {
+                userDisplayName.textContent = user.displayName || 'User';
+                startSessionTimeout(); // Start session timeout on login
+            }
+        });
+    </script>
+</body>
+
+</html>

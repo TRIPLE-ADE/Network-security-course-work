@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="firebase-config.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <p id="message" class="message hidden">Login successfully!</p>
+        <h2>Login</h2>
+        <form id="login-form">
+            <div class="input-group">
+                <input type="email" id="email" required />
+                <label for="email">Email</label>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" required />
+                <label for="password">Password</label>
+            </div>
+            <button class="btn">Login</button>
+        </form>
+        <div class="flex">
+            <p class="info">
+                Don't have an account? <a href="signup.html" class="link">Signup</a>
+            </p>
+            <a href="reset-password.html" class="link">Forgot your password?</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.2.0/firebase-app.js";
+        // Add Firebase products that you want to use
+        import * as firebaseAuth from "https://www.gstatic.com/firebasejs/10.2.0/firebase-auth.js";
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-database.js'
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+        // Initialize Firebase services using the 'app' instance
+        const auth = firebaseAuth.getAuth(app);
+        const db = getDatabase(app);
+
+        // Input validation
+        const emailInput = document.getElementById("email");
+        const passwordInput = document.getElementById("password");
+        const messageElement = document.getElementById("message");
+
+        const validateInput = (inputElement) => {
+            if (!inputElement.checkValidity()) {
+                inputElement.parentElement.classList.add("invalid");
+            } else {
+                inputElement.parentElement.classList.remove("invalid");
+            }
+        };
+
+        const showMessage = (message, isSuccess) => {
+            messageElement.textContent = message;
+            messageElement.classList.remove("hidden");
+            messageElement.classList.add(isSuccess ? "success" : "error");
+            // Automatically hide the message after 5 seconds (5000 milliseconds)
+            setTimeout(() => {
+                messageElement.classList.add("hidden");
+            }, 5000);
+        };
+
+        emailInput.addEventListener("input", () => {
+            validateInput(emailInput);
+        });
+
+        passwordInput.addEventListener("input", () => {
+            validateInput(passwordInput);
+        });
+
+        // Form Event Listener
+        const loginForm = document.getElementById("login-form");
+        loginForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+
+            const email = loginForm.email.value;
+            const password = loginForm.password.value;
+
+            // Use Firebase auth object for email/password login
+            firebaseAuth
+                .signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    // Successful login
+                    const user = userCredential.user;
+                    console.log("Logged in:", user);
+                    showMessage("Login successfully!", true);
+                    // Redirect or perform other actions
+                    window.location.href = "dashboard.html";
+                })
+                .catch((error) => {
+                    // Handle login error
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                   
+                    if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
+                        showMessage('Incorrect Email or Password.', false);
+                    } else {
+                        console.error("Login error:", errorCode, errorMessage);
+                    }
+                });
+        });
+    </script>
+</body>
+
+</html>
