@@ -12,6 +12,7 @@ body {
     font-family: Arial, sans-serif;
     background-color: #f2f2f2;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
@@ -113,16 +114,19 @@ body {
 .flex{
     display: flex;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 .info, .link{
     font-size: small;
+
 }
 
 .link {
     color: #007bff;
     text-decoration: none;
-    margin-top: 10px;
     display: inline-block;
 }
 
@@ -133,6 +137,6 @@ body {
 
 @media (max-width: 768px) {
     .container {
-        max-width: 80%;
+        max-width: 90%;
     }
 }

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
             margin: 0;
@@ -73,10 +74,6 @@
             color: #007bff;
         }
 
-        /* .logout-button:hover {
-            color: #dc3545;
-        } */
-
         .toggle-button {
             position: absolute;
             top: 20px;
@@ -84,6 +81,26 @@
             cursor: pointer;
             font-size: 20px;
         }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-indicator {
+            background-color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
     </style>
     <script src="firebase-config.js"></script>
 </head>
@@ -105,19 +122,42 @@
         </div>
     </div>
 
+    <div class="container">
+        <h3>Todo List App</h3>
+        <form id="todo-form">
+            <h5>Add Todo</h5>
+            <input type="text" id="todo-input" placeholder="Enter todo">
+            <button id="add-button">Add</button>
+        </form>
+       
+        <div>
+            <h5>Todo List</h5>
+            <ul id="todo-list"></ul>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-indicator">Loading...</div>
+    </div>
+    
         
     <script type="module">
-
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-app.js';
         import * as firebaseAuth from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-auth.js';
-        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-database.js'
+        import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.2.0/firebase-database.js'
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
 
         // Initialize Firebase services using the 'app' instance
         const auth = firebaseAuth.getAuth(app);
-        const db = getDatabase(app);
+
+         // Get a reference to the database
+         const db = getDatabase(app);
+
+        // Reference to the "todos" location in the database
+        const todosRef = ref(db, 'todos');
+
 
         // Store the timeout ID
         let logoutTimer;
@@ -175,17 +215,103 @@
             startSessionTimeout();
         });
 
+        /// ...
+
         // Check if a user is currently authenticated
         const userDisplayName = document.getElementById('user-name');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        loadingOverlay.style.display = 'flex';
+
         firebaseAuth.onAuthStateChanged(auth, (user) => {
             if (!user) {
                 // User is not logged in, redirect to login page
                 window.location.href = 'login.html';
             } else {
-                userDisplayName.textContent = user.displayName || 'User';
+
+                userDisplayName.textContent = user.displayName.toUpperCase() || 'User';
                 startSessionTimeout(); // Start session timeout on login
+                
+
+                // Reference to the "todos" location in the database with user's UID
+                const userTodosRef = ref(db, 'todos/' + user.uid);
+
+                // Function to render the user's todo list
+                function renderUserTodoList(todoList) {
+                    const todoListElement = document.getElementById('todo-list');
+                    todoListElement.innerHTML = '';
+
+                    todoList.forEach((todo, index) => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = todo;
+                        const deleteIcon = document.createElement('span');
+                        deleteIcon.className = 'delete-icon';
+                        deleteIcon.innerHTML = '&#128465;'; // Unicode for "cross mark" symbol
+
+                        deleteIcon.addEventListener('click', () => {
+                            // Create a new todo list without the deleted item
+                            const updatedTodoList = todoList.filter((_, i) => i !== index);
+                            set(userTodosRef, updatedTodoList)
+                                .then(() => {
+                                    console.log('Todo item deleted.');
+                                })
+                                .catch(error => {
+                                    console.error('Error deleting todo item:', error);
+                                });
+                        });
+
+                        listItem.appendChild(deleteIcon);
+                        todoListElement.appendChild(listItem);
+                    });
+
+                    // Hide the loading indicator once the todo list is rendered
+                    loadingOverlay.style.display = 'none'; // Add this line
+                }
+
+                // Fetch and render the user's todo list
+                onValue(userTodosRef, snapshot => {
+                    const todoList = snapshot.val() || [];
+                    renderUserTodoList(todoList);
+                }, error => {
+                    console.error('Error fetching user\'s todo list:', error);
+                    // Hide the loading indicator in case of an error
+                    loadingOverlay.style.display = 'none'; // Add this line
+                });
+
+                // Add todo item
+                const addButton = document.getElementById('add-button');
+                const todoInput = document.getElementById('todo-input');
+
+                addButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const newTodo = todoInput.value.trim();
+                    
+                    if (newTodo !== '') {
+                        // Fetch the user's current todo list
+                        get(userTodosRef)
+                            .then(snapshot => {
+                                const currentTodoList = snapshot.val() || [];
+                                const updatedTodoList = [newTodo, ...currentTodoList];
+                                
+                                // Save the updated user's todo list to the database
+                                return set(userTodosRef, updatedTodoList);
+                            })
+                            .then(() => {
+                                console.log('User\'s todo list updated.');
+                            })
+                            .catch(error => {
+                                console.error('Error updating user\'s todo list:', error);
+                            });
+                    }
+                    todoInput.value = '';
+                });
             }
         });
+
+// ...
+
+
+
+
     </script>
 </body>
 
